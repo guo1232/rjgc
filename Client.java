@@ -1,9 +1,16 @@
-package com.tz.screen;
+package com.qq.local;
 
-import java.awt.Dimension;
-import java.awt.FlowLayout;
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
+import java.awt.event.MouseMotionListener;
 import java.io.DataInputStream;
+import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.net.UnknownHostException;
 
 import javax.swing.ImageIcon;
 import javax.swing.JFrame;
@@ -13,96 +20,146 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 
 /**
- * 
- * Java远程桌面系统客户端(学生端)
- * @author LLZ
- * @version 2.0
+ * 类描述:控制端
+ * @author Admin
  *
  */
-
-
-public class Client {
-
-	//Java入口
-	public static void main(String[] args) {
+public class Client {	
+	public static void main(String args[]) throws UnknownHostException, IOException{
+		String input = JOptionPane.showInputDialog("请输入要连接的服务器(端口号)：","127.0.0.1:10000");
+		//先要获取服务器主机，从0开始到：部分的信息
+		String host = input.substring(0,input.indexOf(":"));
 		
-		String input = JOptionPane.showInputDialog("请输入要连接的服务器(端口号)：","58.61.246.64:10000");
-		
-		try{
-			//先要获取服务器主机，从0开始到：部分的信息
-			String host = input.substring(0,input.indexOf(":"));
+		//获取端口号,获取：后面的东西
+		String post = input.substring(input.indexOf(":")+1);
+		System.out.println(host + ":" + post);
 			
-			//获取端口号,获取：后面的东西
-			String post = input.substring(input.indexOf(":")+1);
-			System.out.println(host + ":" + post);
-			
-			//连接服务器
-			//(主机,端口号)
-			//通过Socket获取数据的输入流
-			Socket client = new Socket(host,Integer.parseInt(post));
-			
-			//数据输入流
-			DataInputStream dis = new DataInputStream(client.getInputStream());
-			
-			//创建面板
-			JFrame jframe = new JFrame();
-			//窗体关闭要关闭进程
-			jframe.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-			
-			jframe.setTitle("远程桌面监控系统客户端");
-			//创建窗口
-			jframe.setSize(1024,768);
-			//设置窗体出现位置
-			jframe.setLocation(350,0);
-			
-			//读取服务器(教师端)屏幕分辨率
-			double height = dis.readDouble();
-			double width = dis.readDouble();
-			
-			Dimension dimensionServer = new Dimension((int)height,(int)width);
-			
-			//设置
-			jframe.setSize(dimensionServer);
-			//将服务端的照片作为背景
-			JLabel backImage = new JLabel();
-			JPanel panel = new JPanel();
-			
-			//需要制作滚动条
-			JScrollPane scrollPane = new JScrollPane(panel);
-			panel.setLayout(new FlowLayout());
-			
-			//add背景图片
-			panel.add(backImage);
-			//add滚动条
-			jframe.add(scrollPane);
-			//设置窗体置顶
-			jframe.setAlwaysOnTop(true);
-			//设置窗体可见
-			jframe.setVisible(true);
-			
-			//循环读取图片
-			while(true){
-				//先读取数据大小
-				int len = dis.readInt();
-				//获取的参数放置到一个数组里面
-				byte[] imageData = new byte[len];
-				
-				//读取图片的数据流
-				dis.readFully(imageData);
-				
-				//完整地读取数据的二进制数组
-				ImageIcon image = new ImageIcon(imageData);
-				backImage.setIcon(image);
-				
-				//重新绘制面板
-				jframe.repaint();
+		//连接服务器
+		//(主机,端口号)
+		//通过Socket获取数据的输入流
+		Socket socket = new Socket(host,Integer.parseInt(post));
+		//数据输入流
+		DataInputStream dataIn = new DataInputStream(socket.getInputStream());
+		ObjectOutputStream objectOut = new ObjectOutputStream(socket.getOutputStream());
+		ClientWindow clientWindow = new ClientWindow(objectOut);
+		System.out.println("连接成功...");
+		byte[] image;
+		while(true){
+			//和Server相对应(int)
+			image = new byte[dataIn.readInt()];
+			dataIn.readFully(image);
+			clientWindow.repaintImage(image);
+		}
+	}
+}
+
+/**
+ * 类描述:控制端窗体类
+ * @author Admin
+ *
+ */
+class ClientWindow extends JFrame{
+	//背景标签
+	private JLabel background;
+	//对象输出流
+	private ObjectOutputStream objectOut;
+	
+	//构造方法
+	public ClientWindow(ObjectOutputStream objectOut){
+		this.objectOut = objectOut;
+		//设置标题
+		this.setTitle("QQ远程桌面监控系统客户端");
+		//设置尺寸
+		this.setSize(1024,768);
+		//设置居中
+		this.setLocationRelativeTo(null);
+		//实例化背景标签
+		background = new JLabel();
+		//容器
+		JPanel panel = new JPanel();
+		//将背景图片添加到面板
+		panel.add(background);
+		//创建滚动条面板
+		JScrollPane scrollPanel = new JScrollPane(panel);
+		this.addKeyListener(new KeyListener(){
+
+			@Override
+			public void keyPressed(KeyEvent e) {
+				sendEvent(e);
+			}
+
+			@Override
+			public void keyReleased(KeyEvent e) {
+				sendEvent(e);
+			}
+
+			@Override
+			public void keyTyped(KeyEvent e) {
 				
 			}
 			
-		}catch(Exception e){
-			e.getStackTrace();
+		});
+		//鼠标操作监听
+		background.addMouseListener(new MouseListener(){
+
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				
+			}
+
+			@Override
+			public void mouseEntered(MouseEvent e) {
+				
+			}
+
+			@Override
+			public void mouseExited(MouseEvent e) {
+				
+			}
+
+			@Override
+			public void mousePressed(MouseEvent e) {
+				
+			}
+
+			@Override
+			public void mouseReleased(MouseEvent e) {
+				sendEvent(e);
+			}
+			
+		});
+		
+		//鼠标运动监听
+		background.addMouseMotionListener(new MouseMotionListener(){
+
+			@Override
+			public void mouseDragged(MouseEvent e) {
+				sendEvent(e);
+			}
+
+			@Override
+			public void mouseMoved(MouseEvent e) {
+				sendEvent(e);
+			}
+			
+		});
+		//将滚动条加到面板里面
+		this.add(scrollPanel);
+		//设置关闭退出进程
+		this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		//关闭设置可见
+		this.setVisible(true);
+	}	
+	public void sendEvent(InputEvent event){
+		try {
+			objectOut.writeObject(event);
+			objectOut.flush();
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
-
 	}
-
+	public void repaintImage(byte[] image){
+		background.setIcon(new ImageIcon(image));
+		this.repaint();
+	}
 }
